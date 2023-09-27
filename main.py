@@ -1,6 +1,4 @@
 import json
-from azure.servicebus import ServiceBusService
-from azure.servicebus import Message
 from azure.mgmt.notificationhubs import NotificationHubsManagementClient
 from plyer import notification
 import datetime
@@ -11,25 +9,6 @@ hub_name = 'YourHubName'
 shared_access_key_name = 'YourAccessKeyName'
 shared_access_key_value = 'YourAccessKeyValue'
 
-# Create a ServiceBusService client
-bus_service = ServiceBusService(
-    service_namespace=namespace,
-    shared_access_key_name=shared_access_key_name,
-    shared_access_key_value=shared_access_key_value
-)
-
-# Notification message to be sent
-notification_message = Message("Your Notification Message")
-
-# Specify a tag to target a specific device or user
-notification_message.custom_properties['tag'] = 'YourTag'
-
-# Send the notification using Service Bus
-bus_service.send_notification(hub_name, notification_message)
-
-# Azure Notification Hub configuration
-connection_string = "your_connection_string"
-hub_name = "your_hub_name"
 
 # Dictionary to store booked appointments for different users (in a real application, this data would be stored in a database)
 booked_appointments = {
@@ -77,14 +56,8 @@ if logged_in_user in booked_appointments:
                     message=notification_message,
                     timeout=10  # Display the notification for 10 seconds
                 )
-
-                # Send the notification to Azure Notification Hub
-                hub_service = NotificationHubsManagementClient(connection_string, hub_name)
-                hub_service.send_notification(
-                    tags=[logged_in_user],
-                    message=notification_message,
-                )
 else:
     print("No appointments found for the logged-in user.")
+
 
 
