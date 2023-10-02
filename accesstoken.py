@@ -2,26 +2,28 @@ import azure.functions as func
 import requests
 import hashlib
 import time
+import json
 
-# Variables for the access token
-api_url = "https://apisandbox.mdflow.com/MDFEHRAPI/api/security/login"
-grant_type = "password"
-x_auth_username = "ERH_Centrum"
-x_auth_nonce = "648db976-6428-459d-873e-891169e5a4e2"
+# Define global variables for storing the access token and its expiration time
 access_token = None
-token_expiration_time = None
+expiration_time = 0
 
-def get_access_token():
-    global access_token, token_expiration_time
-    
-    # Check if we have a cached access token and it's still valid
-    if access_token and token_expiration_time and token_expiration_time > time.time():
-        return access_token
-    
+# Define the duration of an access token's validity in seconds (86399 seconds = approximately 24 hours)
+ACCESS_TOKEN_DURATION = 86399
+
+def generate_access_token():
+    global access_token
+    global expiration_time
+
+    api_url = "https://apisandbox.mdflow.com/MDFEHRAPI/api/security/login"
+    grant_type = "password"
+    x_auth_username = "ERH_Centrum"
     x_auth_timestamp = str(int(time.time()))
+    x_auth_nonce = "648db976-6428-459d-873e-891169e5a4e2"
+
     concatenated_string = f"JOtcVaObKu3l:{x_auth_nonce}:{x_auth_timestamp}"
     x_auth_password_digest = hashlib.sha256(concatenated_string.encode()).hexdigest()
-    
+
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
     }
@@ -35,21 +37,27 @@ def get_access_token():
     }
 
     response = requests.post(api_url, headers=headers, data=data)
-    
+
     if response.status_code == 200:
-        response_data = response.json()
+        # Parse the response to get the access token
+        response_data = json.loads(response.content.decode())
         access_token = response_data.get("access_token")
-        expires_in = response_data.get("expires_in", 86400)  # Default to 86400 seconds if expires_in is not provided
-        token_expiration_time = time.time() + expires_in
-        return access_token
-    
-    return None
+        expiration_time = time.time() + ACCESS_TOKEN_DURATION
+        print(f"Access Token: {access_token}")
+        print(f"Expiration Time: {expiration_time} seconds")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
-    access_token = get_access_token()
-    
-    if access_token:
-        return func.HttpResponse(f"Access Token: {access_token}", mimetype="text/plain")
-    else:
-        return func.HttpResponse("Failed to retrieve access token", status_code=500)
+    global access_token
+    global expiration_time
 
+    current_time = time.time()
+
+    # Check if the access token is not set or has expired
+    if access_token is None or current_time >= expiration_time:
+        print("Generating a new access token...")
+        generate_access_token()
+
+    return func.HttpResponse(
+        f"Access Token: {access_token}",
+        mimetype="text/plain",
+    )
