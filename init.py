@@ -1,5 +1,9 @@
 import azure.functions as func
+import logging
 from .cosmos_db_utils import insert_data_into_cosmos_db
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     # Define your Cosmos DB account and database details
@@ -25,7 +29,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         "app_booking": "true"
     }
 
-    # Call the function to insert data into Cosmos DB
-    insert_data_into_cosmos_db(cosmos_db_endpoint, cosmos_db_key, database_id, container_id, data)
+    try:
+        # Call the function to insert data into Cosmos DB
+        insert_data_into_cosmos_db(cosmos_db_endpoint, cosmos_db_key, database_id, container_id, data)
+        logging.info("Data inserted successfully.")
+    except Exception as e:
+        logging.error(f"Error inserting data into Cosmos DB: {str(e)}")
 
-    return func.HttpResponse("Data inserted successfully.")
+    return func.HttpResponse("Data insertion process completed.")
